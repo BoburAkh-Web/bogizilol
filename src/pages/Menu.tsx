@@ -1,9 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, X, Flame, AlertTriangle } from "lucide-react";
 import { useLanguage } from "@/i18n/LanguageContext";
 import PageSEO from "@/components/seo/PageSEO";
-import { MenuCategory, MenuItem } from "@/data/menuData";
+import { MenuItem } from "@/data/menuData";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,14 +14,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { useQuery } from "@tanstack/react-query";
-import { getFoods } from "@/lib/api";
-
-const categories: { key: MenuCategory; label: { en: string; uz: string; ru: string } }[] = [
-  { key: "appetizers", label: { en: "Appetizers", uz: "Salatlar", ru: "Закуски" } },
-  { key: "mains", label: { en: "Main Courses", uz: "Asosiy taomlar", ru: "Основные блюда" } },
-  { key: "grill", label: { en: "From the Grill", uz: "Kaboblar", ru: "С мангала" } },
-  { key: "tea", label: { en: "Tea & Sweets", uz: "Choy va shirinliklar", ru: "Чай и сладости" } },
-];
+import { getFoods, getCategories } from "@/lib/api";
 
 const formatPrice = (price: number) => {
   return new Intl.NumberFormat("uz-UZ").format(price) + " сўм";
@@ -29,13 +22,27 @@ const formatPrice = (price: number) => {
 
 export default function Menu() {
   const { language } = useLanguage();
+
+  // --- Backenddan data ---
   const { data: menuItems = [], isLoading, isError } = useQuery({
-  queryKey: ["foods"],
-  queryFn: getFoods,
-});
-  const [activeCategory, setActiveCategory] = useState<MenuCategory>("appetizers");
+    queryKey: ["foods"],
+    queryFn: getFoods,
+  });
+  const { data: categories = [] } = useQuery({
+    queryKey: ["categories"],
+    queryFn: getCategories,
+  });
+
+  const [activeCategory, setActiveCategory] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
+
+  // Kategoriyalar kelgach, birinchisini avtomatik tanlaymiz
+  useEffect(() => {
+    if (categories.length > 0 && !activeCategory) {
+      setActiveCategory(categories[0]._id);
+    }
+  }, [categories, activeCategory]);
 
   const filteredItems = useMemo(() => {
     if (searchQuery.trim()) {
@@ -46,28 +53,30 @@ export default function Menu() {
           item.description[language].toLowerCase().includes(q)
       );
     }
-    return menuItems.filter((item) => item.category === activeCategory);
-  }, [activeCategory, searchQuery, language]);
+    return menuItems.filter((item) => item.categoryId === activeCategory);
+  }, [activeCategory, searchQuery, language, menuItems]);
 
   const searchLabel = { en: "Search dishes…", uz: "Taom qidirish…", ru: "Поиск блюд…" };
   const ingredientsLabel = { en: "Ingredients", uz: "Tarkibi", ru: "Ингредиенты" };
   const allergensLabel = { en: "Allergens", uz: "Allergenlar", ru: "Аллергены" };
   const specialLabel = { en: "Chef's Special", uz: "Oshpaz tanlovi", ru: "Выбор шефа" };
-  if (isLoading) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-muted-foreground font-body">Yuklanmoqda...</p>
-    </div>
-  );
-}
 
-if (isError) {
-  return (
-    <div className="min-h-screen flex items-center justify-center">
-      <p className="text-destructive font-body">Xatolik yuz berdi. Qayta urinib ko'ring.</p>
-    </div>
-  );
-}
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground font-body">Yuklanmoqda...</p>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-destructive font-body">Xatolik yuz berdi. Qayta urinib ko'ring.</p>
+      </div>
+    );
+  }
+
   return (
     <main className="min-h-screen bg-background pt-24 pb-16">
       <PageSEO
@@ -131,18 +140,18 @@ if (isError) {
           >
             {categories.map((cat) => (
               <button
-                key={cat.key}
-                onClick={() => setActiveCategory(cat.key)}
+                key={cat._id}
+                onClick={() => setActiveCategory(cat._id)}
                 className={`
                   px-5 py-2.5 rounded-full text-sm font-body font-medium transition-all duration-300
                   ${
-                    activeCategory === cat.key
+                    activeCategory === cat._id
                       ? "bg-primary text-primary-foreground shadow-lg shadow-primary/25"
                       : "bg-card text-muted-foreground hover:bg-secondary hover:text-foreground border border-border/50"
                   }
                 `}
               >
-                {cat.label[language]}
+                {cat.name}
               </button>
             ))}
           </motion.div>
@@ -254,27 +263,31 @@ if (isError) {
                 </DialogHeader>
 
                 {/* Ingredients */}
-                <div>
-                  <h4 className="text-sm font-body font-semibold text-foreground mb-1">
-                    {ingredientsLabel[language]}
-                  </h4>
-                  <p className="text-sm text-muted-foreground font-body">
-                    {selectedItem.ingredients[language]}
-                  </p>
-                </div>
-
-                {/* Allergens */}
-                <div className="flex items-start gap-2">
-                  <AlertTriangle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                {selectedItem.ingredients[language] && (
                   <div>
-                    <h4 className="text-sm font-body font-semibold text-foreground mb-0.5">
-                      {allergensLabel[language]}
+                    <h4 className="text-sm font-body font-semibold text-foreground mb-1">
+                      {ingredientsLabel[language]}
                     </h4>
                     <p className="text-sm text-muted-foreground font-body">
-                      {selectedItem.allergens[language]}
+                      {selectedItem.ingredients[language]}
                     </p>
                   </div>
-                </div>
+                )}
+
+                {/* Allergens */}
+                {selectedItem.allergens[language] && (
+                  <div className="flex items-start gap-2">
+                    <AlertTriangle className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
+                    <div>
+                      <h4 className="text-sm font-body font-semibold text-foreground mb-0.5">
+                        {allergensLabel[language]}
+                      </h4>
+                      <p className="text-sm text-muted-foreground font-body">
+                        {selectedItem.allergens[language]}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 {/* Price */}
                 <div className="pt-2 border-t border-border">

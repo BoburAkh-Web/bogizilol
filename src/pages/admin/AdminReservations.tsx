@@ -1,110 +1,142 @@
-import React, { useState } from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Check, X } from "lucide-react";
+import React from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { getReservations, deleteReservation } from "@/lib/api";
 import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
-type ReservationStatus = "pending" | "confirmed" | "declined";
 
-interface Reservation {
-  id: string;
-  name: string;
-  phone: string;
-  date: string;
-  time: string;
-  guests: number;
-  table: string;
-  status: ReservationStatus;
-}
-
-const mockReservations: Reservation[] = [
-  { id: "r1", name: "Aziz Karimov", phone: "+998 90 123 4567", date: "2026-02-12", time: "19:00", guests: 4, table: "Window", status: "pending" },
-  { id: "r2", name: "Maria Ivanova", phone: "+998 91 234 5678", date: "2026-02-12", time: "20:00", guests: 2, table: "Garden", status: "pending" },
-  { id: "r3", name: "John Smith", phone: "+998 93 345 6789", date: "2026-02-13", time: "18:30", guests: 6, table: "Private Room", status: "confirmed" },
-  { id: "r4", name: "Nodira Alimova", phone: "+998 90 456 7890", date: "2026-02-13", time: "19:30", guests: 3, table: "Indoor", status: "pending" },
-  { id: "r5", name: "Dmitriy Petrov", phone: "+998 94 567 8901", date: "2026-02-14", time: "20:00", guests: 2, table: "Window", status: "declined" },
-  { id: "r6", name: "Shaxlo Umarova", phone: "+998 91 678 9012", date: "2026-02-14", time: "19:00", guests: 8, table: "Private Room", status: "pending" },
-  { id: "r7", name: "Robert Brown", phone: "+998 93 789 0123", date: "2026-02-15", time: "18:00", guests: 5, table: "Garden", status: "confirmed" },
-  { id: "r8", name: "Laylo Rashidova", phone: "+998 90 890 1234", date: "2026-02-15", time: "21:00", guests: 4, table: "Indoor", status: "pending" },
-];
-
-const statusConfig: Record<ReservationStatus, { label: string; variant: "default" | "secondary" | "destructive" }> = {
-  pending: { label: "Pending", variant: "secondary" },
-  confirmed: { label: "Confirmed", variant: "default" },
-  declined: { label: "Declined", variant: "destructive" },
+// Backend "date" (ISO) -> chiroyli "10 Jul 2026"
+const formatDate = (iso: string) => {
+  try {
+    return format(new Date(iso), "dd MMM yyyy");
+  } catch {
+    return iso;
+  }
 };
 
 const AdminReservations: React.FC = () => {
-  const [reservations, setReservations] = useState<Reservation[]>(mockReservations);
-  const { toast } = useToast();
+  const {
+    data: reservations = [],
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ["reservations"],
+    queryFn: getReservations,
+  });
 
-  const updateStatus = (id: string, status: ReservationStatus) => {
-    setReservations((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, status } : r))
+  const queryClient = useQueryClient();
+const { toast } = useToast();
+
+const deleteMutation = useMutation({
+  mutationFn: deleteReservation,
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["reservations"] });
+    toast({ title: "O'chirildi", description: "Bron o'chirildi." });
+  },
+  onError: (err: Error) => {
+    toast({ title: "Xato", description: err.message, variant: "destructive" });
+  },
+});
+
+const handleDelete = (id: string) => {
+  if (confirm("Rostdan ham o'chirmoqchimisiz?")) {
+    deleteMutation.mutate(id);
+  }
+};
+
+  if (isLoading) {
+    return <p className="text-muted-foreground p-6">Yuklanmoqda...</p>;
+  }
+
+  if (isError) {
+    return (
+      <p className="text-destructive p-6">
+        Xatolik yuz berdi. Qayta urinib ko'ring.
+      </p>
     );
-    const res = reservations.find((r) => r.id === id);
-    toast({
-      title: status === "confirmed" ? "Reservation Confirmed" : "Reservation Declined",
-      description: `${res?.name} — ${res?.date} at ${res?.time}`,
-    });
-  };
-
-  const pending = reservations.filter((r) => r.status === "pending").length;
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
-        <Badge variant="secondary" className="text-sm">{pending} pending</Badge>
-        <Badge className="text-sm">{reservations.filter((r) => r.status === "confirmed").length} confirmed</Badge>
+        <Badge variant="secondary" className="text-sm">
+          {reservations.length} ta bron
+        </Badge>
       </div>
 
-      <Card>
+<Card>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Guest</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Time</TableHead>
-                <TableHead className="hidden sm:table-cell">Guests</TableHead>
-                <TableHead className="hidden md:table-cell">Table</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+                <TableHead>Mehmon</TableHead>
+                <TableHead>Sana</TableHead>
+                <TableHead>Vaqt</TableHead>
+                <TableHead className="hidden sm:table-cell">
+                  Mehmonlar
+                </TableHead>
+                <TableHead className="hidden md:table-cell">Stol</TableHead>
+                <TableHead className="hidden lg:table-cell">Izoh</TableHead>
+                <TableHead className="text-right">Amallar</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {reservations.map((res) => {
-                const sc = statusConfig[res.status];
-                return (
-                  <TableRow key={res.id}>
-                    <TableCell>
-                      <div className="font-medium text-sm">{res.name}</div>
-                      <div className="text-xs text-muted-foreground">{res.phone}</div>
-                    </TableCell>
-                    <TableCell className="text-sm">{res.date}</TableCell>
-                    <TableCell className="text-sm">{res.time}</TableCell>
-                    <TableCell className="hidden sm:table-cell text-sm">{res.guests}</TableCell>
-                    <TableCell className="hidden md:table-cell text-sm">{res.table}</TableCell>
-                    <TableCell>
-                      <Badge variant={sc.variant} className="text-xs">{sc.label}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {res.status === "pending" && (
-                        <div className="flex gap-1 justify-end">
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => updateStatus(res.id, "confirmed")}>
-                            <Check className="h-4 w-4 text-primary" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => updateStatus(res.id, "declined")}>
-                            <X className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
+              {reservations.map((res) => (
+                <TableRow key={res._id}>
+                  <TableCell>
+                    <div className="font-medium text-sm">
+                      {res.user_id?.firstname} {res.user_id?.lastname}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {res.user_id?.phone}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {formatDate(res.date)}
+                  </TableCell>
+                  <TableCell className="text-sm">{res.time}</TableCell>
+                  <TableCell className="hidden sm:table-cell text-sm">
+                    {res.guests_count}
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell text-sm capitalize">
+                    {res.table_preference}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-sm text-muted-foreground max-w-[200px] truncate">
+                    {res.note}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => handleDelete(res._id)}
+                    >
+                      <Trash2 className="h-4 w-4 text-destructive" />
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+              {reservations.length === 0 && (
+                <TableRow>
+                  <TableCell
+                    colSpan={7}
+                    className="text-center py-8 text-muted-foreground"
+                  >
+                    Hozircha bron yo'q.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

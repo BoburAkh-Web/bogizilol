@@ -1,7 +1,9 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import PageSEO from "@/components/seo/PageSEO";
+import { useMutation } from "@tanstack/react-query";
+import { createReservation } from "@/lib/api";
 import { format } from "date-fns";
+import PageSEO from "@/components/seo/PageSEO";
 import {
   CalendarIcon,
   Clock,
@@ -97,6 +99,18 @@ export default function Reservation() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
+  const reservationMutation = useMutation({
+  mutationFn: createReservation,
+  onSuccess: () => {
+    setIsSuccess(true);
+  },
+  onError: (err: Error) => {
+    alert("Xatolik: " + err.message);
+  },
+});
+
+
+
   const canProceed = () => {
     switch (STEPS[currentStep]) {
       case "date": return !!date;
@@ -115,13 +129,20 @@ export default function Reservation() {
     if (currentStep > 0) setCurrentStep((s) => s - 1);
   };
 
-  const handleSubmit = async () => {
-    setIsSubmitting(true);
-    // Mock API call
-    await new Promise((r) => setTimeout(r, 1500));
-    setIsSubmitting(false);
-    setIsSuccess(true);
-  };
+  const handleSubmit = () => {
+  if (!date) return;
+
+  reservationMutation.mutate({
+    user_id: "6a4a7066706106e3bf04dd05",
+    name: name,
+    phone: phone,
+    table_preference: tablePreference || "indoor",
+    date: format(date, "yyyy-MM-dd"),   // Date -> "2026-10-12"
+    time: time,
+    guests_count: partySize,
+    note: email ? `Email: ${email}` : "",
+  });
+};
 
   const handleReset = () => {
     setDate(undefined);
@@ -430,10 +451,10 @@ export default function Reservation() {
           ) : (
             <Button
               onClick={handleSubmit}
-              disabled={!canProceed() || isSubmitting}
+              disabled={!canProceed() || reservationMutation.isPending}
               className="gap-2 font-body bg-primary hover:bg-primary/90"
             >
-              {isSubmitting ? (
+              {reservationMutation.isPending ? (
                 <span className="inline-block w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 <Check className="h-4 w-4" />

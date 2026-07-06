@@ -3,6 +3,7 @@ export type MenuCategory = "appetizers" | "mains" | "grill" | "tea";
 export interface MenuItem {
   id: string;
   category: MenuCategory;
+  categoryId?: string;        // 👈 shu qator BORmi?
   name: { en: string; uz: string; ru: string };
   description: { en: string; uz: string; ru: string };
   ingredients: { en: string; uz: string; ru: string };

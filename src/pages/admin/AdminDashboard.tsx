@@ -1,12 +1,13 @@
 import React from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
-import { LayoutDashboard, UtensilsCrossed, Star, CalendarCheck, Menu, X } from "lucide-react";
+import { LayoutDashboard, UtensilsCrossed, Star, CalendarCheck, Menu, X, Tags } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { to: "/admin", icon: LayoutDashboard, label: "Overview", end: true },
   { to: "/admin/menu", icon: UtensilsCrossed, label: "Menu Items" },
+  { to: "/admin/categories", icon: Tags, label: "Kategoriyalar" },
   { to: "/admin/specials", icon: Star, label: "Daily Specials" },
   { to: "/admin/reservations", icon: CalendarCheck, label: "Reservations" },
 ];

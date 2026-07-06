@@ -19,6 +19,10 @@ import AdminSpecials from "./pages/admin/AdminSpecials";
 import AdminReservations from "./pages/admin/AdminReservations";
 import { useEffect } from "react";
 import { getCategories, getFoods } from "@/lib/api";
+import AdminCategories from "./pages/admin/AdminCategories";
+import AdminLogin from "./pages/admin/AdminLogin";
+import UserLogin from "./pages/UserLogin";
+
 
 const queryClient = new QueryClient();
 
@@ -27,12 +31,9 @@ const App = () => {
 
 // ...App ichida:
 useEffect(() => {
-  getCategories().then((data) => console.log("📂 Kategoriyalar:", data));
-  getFoods().then((data) => console.log("🍽️ Taomlar:", data));
-}, []);
-
-useEffect(() => {
-  getCategories().then((data) => console.log("📂 Bitta kategoriya:", data[0]));
+  fetch(`${import.meta.env.VITE_API_BASE_URL}/reservations`)
+    .then((r) => r.json())
+    .then((d) => console.log("📅 Reservations:", d));
 }, []);
   return (
     <HelmetProvider>
@@ -54,9 +55,12 @@ useEffect(() => {
                 </Route>
 
                 {/* Admin routes — no public header/footer */}
+                <Route path="/login" element={<UserLogin/>}/>
+                <Route path="/admin/login" element={<AdminLogin/>}/>
                 <Route path="/admin" element={<AdminDashboard />}>
                   <Route index element={<AdminOverview />} />
                   <Route path="menu" element={<AdminMenuItems />} />
+                  <Route path="categories" element={<AdminCategories />} />
                   <Route path="specials" element={<AdminSpecials />} />
                   <Route path="reservations" element={<AdminReservations />} />
                 </Route>
