@@ -23,7 +23,7 @@ import AdminCategories from "./pages/admin/AdminCategories";
 import AdminLogin from "./pages/admin/AdminLogin";
 import UserLogin from "./pages/UserLogin";
 import ProtectedRoute from "./components/ProtectedRoute";
-import UserSignup from "./pages/UserSignUp";
+import UserSignup from "./pages/UserSignup";
 
 
 const queryClient = new QueryClient();
