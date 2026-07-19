@@ -22,6 +22,8 @@ import { getCategories, getFoods } from "@/lib/api";
 import AdminCategories from "./pages/admin/AdminCategories";
 import AdminLogin from "./pages/admin/AdminLogin";
 import UserLogin from "./pages/UserLogin";
+import ProtectedRoute from "./components/ProtectedRoute";
+import UserSignup from "./pages/UserSignUp";
 
 
 const queryClient = new QueryClient();
@@ -45,15 +47,20 @@ useEffect(() => {
             <BrowserRouter>
               <Routes>
                 {/* Public routes with main layout */}
+                
                 <Route element={<Layout />}>
                   <Route path="/" element={<Index />} />
                   <Route path="/menu" element={<Menu />} />
-                  <Route path="/reservation" element={<Reservation />} />
+                  <Route path="/reservation" element={
+                    <ProtectedRoute tokenKey="token" redirectTo="/login">
+                      <Reservation />
+                    </ProtectedRoute>
+                    } />
                   <Route path="/story" element={<Story />} />
                   <Route path="/events" element={<Events />} />
                   <Route path="*" element={<NotFound />} />
                 </Route>
-
+                <Route path="/signup" element={<UserSignup />} />
                 {/* Admin routes — no public header/footer */}
                 <Route path="/login" element={<UserLogin/>}/>
                 <Route path="/admin/login" element={<AdminLogin/>}/>

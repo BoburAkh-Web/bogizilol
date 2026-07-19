@@ -14,18 +14,25 @@ async function request<T>(
   endpoint: string,
   options?: { method?: string; body?: unknown }
 ): Promise<T> {
+  // localStorage'dan token olamiz (bo'lsa)
+  const token = localStorage.getItem("token");
+
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     method: options?.method ?? "GET",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
     body: options?.body ? JSON.stringify(options.body) : undefined,
   });
+
   if (!res.ok) {
     throw new Error(`API xatosi: ${res.status} ${res.statusText}`);
   }
+
   const json: ApiResponse<T> = await res.json();
   return json.data;
 }
-
 
 // Backend taomini → frontend MenuItem shakliga aylantiradi
 export function adaptFood(food: ApiFood): MenuItem {
@@ -180,3 +187,80 @@ export function deleteReservation(id: string) {
   });
 }
 
+
+// ========== AUTH ==========
+
+// Backend auth javoblari uchun tiplar
+export interface AuthTokenResponse {
+  token: string;
+}
+export interface SignupRequestResponse {
+  token: string;    // signup-confirm uchun kerak
+  botLink: string;  // Telegram bot havolasi
+}
+export interface LoginRequestResponse {
+  botLink?: string; // ba'zan bot havolasi (login uchun)
+}
+
+// --- Admin login ---
+export async function loginAdmin(data: { phone: string; password: string }) {
+  const res = await fetch(`${BASE_URL}/users/login-admin`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    throw new Error(`Login xatosi: ${res.status}`);
+  }
+  return res.json() as Promise<{ status: string; token: string }>;
+}
+// --- User signup (1-qadam): ism/familya/telefon -> { token, botLink } ---
+export async function signupRequest(data: { firstname: string; lastname: string; phone: string }) {
+  const res = await fetch(`${BASE_URL}/users/signup-request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    throw new Error(`Signup xatosi: ${res.status}`);
+  }
+  return res.json() as Promise<{ status: string; token: string; botLink: string }>;
+}
+
+// --- User signup (2-qadam): token + kod -> JWT ---
+export async function signupConfirm(data: { token: string; code: number }) {
+  const res = await fetch(`${BASE_URL}/users/signup-confirm`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    throw new Error(`Tasdiqlash xatosi: ${res.status}`);
+  }
+  return res.json() as Promise<{ status: string; token: string }>;
+}
+// --- User login (1-qadam): telefon -> bot kod yuboradi ---
+export async function loginRequest(data: { phone: string }) {
+  const res = await fetch(`${BASE_URL}/users/login-request`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    throw new Error(`Login xatosi: ${res.status}`);
+  }
+  return res.json();
+}
+
+// --- User login (2-qadam): telefon + kod -> JWT ---
+export async function loginVerify(data: { phone: string; code: string }) {
+  const res = await fetch(`${BASE_URL}/users/login-verify`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+  if (!res.ok) {
+    throw new Error(`Kod xatosi: ${res.status}`);
+  }
+  return res.json() as Promise<{ status: string; token: string }>;
+}

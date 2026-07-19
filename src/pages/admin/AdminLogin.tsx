@@ -5,7 +5,7 @@ import { Phone, Lock, Eye, EyeOff, ArrowRight, UtensilsCrossed, ShieldCheck } fr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import logo from "@/assets/bogi-zilol-premium-img.jpg";
-
+import { loginAdmin } from "@/lib/api";
 /** Xom raqamlardan "+998 (90) 123-45-67" yasaydi (9 ta raqam saqlanadi). */
 const formatPhone = (digits: string) => {
   const d = digits.slice(0, 9);
@@ -37,23 +37,27 @@ export default function AdminLogin() {
   const isValid = phoneDigits.length === 9 && password.length >= 1;
 
   const handleSubmit = async () => {
-    if (!isValid) {
-      setError("Telefon raqam va parolni to'liq kiriting.");
-      return;
-    }
-    setIsSubmitting(true);
-    setError("");
+  if (!isValid) {
+    setError("Telefon raqam va parolni to'liq kiriting.");
+    return;
+  }
+  setIsSubmitting(true);
+  setError("");
 
-    // ---------------------------------------------------------------
-    // TODO: Backend ulanadigan joy. Endpoint bergach:
-    //   const res = await loginAdmin({ phone: "998" + phoneDigits, password });
-    //   localStorage.setItem("admin_token", res.token);
-    //   navigate("/admin");
-    // ---------------------------------------------------------------
-    await new Promise((r) => setTimeout(r, 900));
-    setIsSubmitting(false);
+  try {
+    const res = await loginAdmin({
+      phone: "+998" + phoneDigits,
+      password: password,
+    });
+    // Token'ni saqlaymiz
+    localStorage.setItem("token", res.token);
     navigate("/admin");
-  };
+  } catch (err) {
+    setError("Telefon raqam yoki parol noto'g'ri.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter") handleSubmit();

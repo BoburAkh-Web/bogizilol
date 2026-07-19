@@ -5,6 +5,7 @@ import { Phone, ArrowRight, ArrowLeft, Send, CalendarCheck, UtensilsCrossed } fr
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import logo from "@/assets/bogi-zilol-premium-img.jpg";
+import { loginRequest, loginVerify } from "@/lib/api";
 
 /** Xom raqamlardan "+998 (90) 123-45-67" yasaydi (9 ta raqam saqlanadi). */
 const formatPhone = (digits: string) => {
@@ -18,7 +19,7 @@ const formatPhone = (digits: string) => {
   return out;
 };
 
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 4;
 const RESEND_SECONDS = 60;
 
 export default function UserLogin() {
@@ -54,23 +55,23 @@ export default function UserLogin() {
 
   // --- 1-qadam: kod yuborish ---
   const handleSendCode = async () => {
-    if (phoneDigits.length !== 9) {
-      setError("Telefon raqamni to'liq kiriting.");
-      return;
-    }
-    setIsSubmitting(true);
-    setError("");
+  if (phoneDigits.length !== 9) {
+    setError("Telefon raqamni to'liq kiriting.");
+    return;
+  }
+  setIsSubmitting(true);
+  setError("");
 
-    // ---------------------------------------------------------------
-    // TODO: Backend — Telegram bot orqali kod yuborish:
-    //   await sendOtp({ phone: "998" + phoneDigits });
-    // ---------------------------------------------------------------
-    await new Promise((r) => setTimeout(r, 900));
-
-    setIsSubmitting(false);
+  try {
+    await loginRequest({ phone: "+998" + phoneDigits });
     setStep("otp");
     setSecondsLeft(RESEND_SECONDS);
-  };
+  } catch (err) {
+    setError("Bu raqam ro'yxatdan o'tmagan. Avval ro'yxatdan o'ting.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   // --- OTP katakchalari ---
   const handleOtpChange = (index: number, value: string) => {
@@ -102,35 +103,37 @@ export default function UserLogin() {
   };
 
   // --- 2-qadam: kodni tasdiqlash ---
-  const handleVerify = async () => {
-    const code = otp.join("");
-    if (code.length !== OTP_LENGTH) {
-      setError("6 xonali kodni to'liq kiriting.");
-      return;
-    }
-    setIsSubmitting(true);
-    setError("");
+const handleVerify = async () => {
+  const code = otp.join("");
+  if (code.length !== OTP_LENGTH) {
+    setError("Kodni to'liq kiriting.");
+    return;
+  }
+  setIsSubmitting(true);
+  setError("");
 
-    // ---------------------------------------------------------------
-    // TODO: Backend — kodni tekshirish:
-    //   const res = await verifyOtp({ phone: "998" + phoneDigits, code });
-    //   localStorage.setItem("user_token", res.token);
-    //   navigate("/");
-    // ---------------------------------------------------------------
-    await new Promise((r) => setTimeout(r, 900));
-
-    setIsSubmitting(false);
+  try {
+    const res = await loginVerify({ phone: "+998" + phoneDigits, code });
+    localStorage.setItem("token", res.token);
     navigate("/");
-  };
+  } catch (err) {
+    setError("Kod noto'g'ri yoki muddati o'tgan.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
-  const handleResend = () => {
-    if (secondsLeft > 0) return;
-    setOtp(Array(OTP_LENGTH).fill(""));
+const handleResend = async () => {
+  if (secondsLeft > 0) return;
+  setOtp(Array(OTP_LENGTH).fill(""));
+  try {
+    await loginRequest({ phone: "+998" + phoneDigits });
     setSecondsLeft(RESEND_SECONDS);
-    // TODO: sendOtp qayta chaqiriladi
     otpRefs.current[0]?.focus();
-  };
-
+  } catch {
+    setError("Kodni qayta yuborishда xato.");
+  }
+};
   const goBack = () => {
     setStep("phone");
     setOtp(Array(OTP_LENGTH).fill(""));
